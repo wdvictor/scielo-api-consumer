@@ -1,16 +1,17 @@
 // ignore_for_file: constant_identifier_names, avoid_dynamic_calls
 
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:dio/dio.dart';
 
-void main(List<String> arguments) {
+void main() {
   ScieloApiConsumer scieloApiConsumer = ScieloApiConsumer();
+  final Dio dio = Dio();
+
   scieloApiConsumer
-      .getIdentifiers()
-      .then((CollectionResponse value) => value.objects.forEach((element) {
-            print(element.collection);
-          }))
+      .getIdentifiers(dio)
+      .then((IdentifiersResponse value) => print('ok'))
       .onError((error, stackTrace) => print('$error'));
 }
 
@@ -20,44 +21,45 @@ class ScieloApiConsumer {
   final String articleEndpoint = 'api/v1/article';
   final String collectionEndpoint = 'api/v1/collection';
 
-  Future<CollectionResponse> getIdentifiers() async {
+  Future<IdentifiersResponse> getIdentifiers(Dio dio) async {
     final Response<dynamic> response =
-        await Dio().get('$articleMetaUrl/$journalEndpoint/identifiers');
+        await dio.get('$articleMetaUrl/$journalEndpoint/identifiers');
 
+    print(response.requestOptions.headers);
     if (response.statusCode == 200) {
-      return CollectionResponse.fromJson(response.data);
+      return IdentifiersResponse.fromJson(response.data);
     } else {
-      throw 'GIDTF-01';
+      throw 'GIDTF-01 ${response.statusCode}';
     }
   }
 }
 
-class CollectionResponse {
-  CollectionResponse({
+class IdentifiersResponse {
+  IdentifiersResponse({
     required this.objects,
     required this.meta,
   });
 
-  factory CollectionResponse.fromRawJson(String str) =>
-      CollectionResponse.fromJson(json.decode(str));
+  factory IdentifiersResponse.fromRawJson(String str) =>
+      IdentifiersResponse.fromJson(json.decode(str));
 
-  factory CollectionResponse.fromJson(dynamic json) => CollectionResponse(
-        objects: List<CollectionData>.from(
+  factory IdentifiersResponse.fromJson(dynamic json) => IdentifiersResponse(
+        objects: List<IdentifierData>.from(
           json['objects'].map(
-            (dynamic x) => CollectionData.fromJson(x),
+            (dynamic x) => IdentifierData.fromJson(x),
           ),
         ),
         meta: Meta.fromJson(json['meta']),
       );
 
-  List<CollectionData> objects;
+  List<IdentifierData> objects;
   Meta meta;
 
   String toRawJson() => json.encode(toJson());
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'objects':
-            List<dynamic>.from(objects.map((CollectionData x) => x.toJson())),
+            List<dynamic>.from(objects.map((IdentifierData x) => x.toJson())),
         'meta': meta.toJson(),
       };
 }
@@ -106,20 +108,20 @@ class Filter {
   Map<String, dynamic> toJson() => {};
 }
 
-class CollectionData {
-  CollectionData({
+class IdentifierData {
+  IdentifierData({
     required this.processingDate,
     required this.collection,
     required this.code,
   });
 
-  factory CollectionData.fromJson(dynamic json) => CollectionData(
+  factory IdentifierData.fromJson(dynamic json) => IdentifierData(
         processingDate: DateTime.parse(json['processing_date']),
         collection: collectionValues.map[json['collection']]!,
         code: json['code'],
       );
-  factory CollectionData.fromRawJson(String str) =>
-      CollectionData.fromJson(json.decode(str));
+  factory IdentifierData.fromRawJson(String str) =>
+      IdentifierData.fromJson(json.decode(str));
 
   String toRawJson() => json.encode(toJson());
 
